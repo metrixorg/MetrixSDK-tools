@@ -13,41 +13,45 @@
 روبی به صورت پیش فرض در سیستم عامل  مک فعال میباشد برای دیگر سیستم عامل ها میتوانید از طریق لینک زیر نصب و فعال نمایید.
  https://www.ruby-lang.org/en/documentation/installation/
 
-نحوه نصب `apktool` در لینک زیر توضیح داده شده است.:
+نحوه نصب `apktool` در لینک زیر توضیح داده شده است:
  https://ibotpeaches.github.io/Apktool/install/
 
 اگر پکیج منیجر `brew` روی سیستم عامل مک شما نصب باشد به راحتی میتوانید از طریق دستور زیر `apktool` را نصب نمایید:
+<div dir="ltr">
 
-```
-brew install apktool
-```
+    brew install apktool
+</div>
 
 `jarsigner` یکی از ابزار های jdk می باشد که باید روی سیستم شما نصب باشد برای نمونه یکی از نسخه های jdk که روی سیستم عامل مک نصب میباشد از مکان زیر قرار دارد:
-```
-/Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/
-```
+<div dir="ltr">
+
+    /Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/
+</div>
 
 در محل نصب jdk پوشه ای به اسم `bin` وجود دارد که در نمونه بالا در زیر قرار دارد:
 
-```
-/Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/Contents/Home/bin/
-```
+<div dir="ltr">
 
+    /Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/Contents/Home/bin/
+</div>
 در این پوشه شما میتوانید `jarsigner` را پیدا کنید که برای `metrix-dtt`  استفاده میشود
 
 `metrix-dtt` ازین ابزار ها استفاده میکند، باید محل نصب را در `PATH` سیستم خود اضافه کنید.
 
-پس برای اضافه کردن `apktool` (۱) توجه داشته باشید که اگر `apktool` را با `brew` نصب کرده اید نیازی به اضافه کردن آن به `PATH` نیست و برای اضافه کردن `bin` (۲) برای نمونه دو آدرس زیر را اضافه میکنید:
+پس برای اضافه کردن `apktool` )۱( توجه داشته باشید که اگر `apktool` را با `brew` نصب کرده اید نیازی به اضافه کردن آن به `PATH` نیست و برای اضافه کردن `bin` )۲( برای نمونه دو آدرس زیر را اضافه میکنید:
+
+<div dir="ltr">
 
 1. /User/dummy/some/random/folder/
 2. /Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/Contents/Home/bin/
-
+</div>
 
 شما برای استفاده از `metrix-dtt` نیاز به  `keystore` دارید اگر apk شما `sign`   شده   نیست اندروید استودیو یک  `keystore` پیش فرض در محل زیر دارد  :
 
-```
-$HOME/.android/debug.keystore
-```
+<div dir="ltr">
+
+    $HOME/.android/debug.keystore
+</div>
 
 علت نیاز `metrix-dtt` به این فایل برای استخراج apk است و همچنین برای بستن فایل apk بعد از قرار دادن ترکر ها است.
 
@@ -57,19 +61,20 @@ $HOME/.android/debug.keystore
 
 در زیر میتوانید یک فایل `metrix-config.yaml` را مشاهده کنید که ترکر هایی برای ساخت apk جداگانه برای استور های **store_1**، **store_2** و **store_3**:
 
-```yaml
-apk_path: /Users/uerceg/Desktop/apk/example-release.apk
-keystore_path: /Users/uerceg/Desktop/apk/mykeystore.jks
-keystore_pass: mykeystorepass
-keystore_alias: mykeystorealias
-stores:
-    store_1:
+<div dir="ltr">
+
+    apk_path: /Users/uerceg/Desktop/apk/example-release.apk
+    keystore_path: /Users/uerceg/Desktop/apk/mykeystore.jks
+    keystore_pass: mykeystorepass
+    keystore_alias: mykeystorealias
+    stores:
+        store_1:
         default_tracker: abc123
     store_2:
         default_tracker: abc456
     store_3:
         default_tracker: abc789
-```
+</div>
 
 
 1. `apk_path` = آدرس کامل فایل apk
@@ -79,28 +84,30 @@ stores:
 5. `default_tracker` = ترکر توکن های دریافتی از پنل متریکس
 
 چهار پارامتر اول هم میتوانند به صورت کلی تعریف شوند و هم به صورت اختصاصی برای هر استور مانند زیر:
-```yaml
-apk_path: /Users/uerceg/Desktop/apk/example-release.apk
-keystore_path: /Users/uerceg/Desktop/apk/mykeystore.jks
-keystore_pass: mykeystorepass
-keystore_alias: mykeystorealias
-stores:
-    store_1:
-        default_tracker: abc123
-        keystore_path: /Users/uerceg/Desktop/apk/differentkeystore.jks
-        keystore_pass: differentkeystorepass
-        keystore_alias: differentkeystorealias
-    store_2:
-        default_tracker: abc456
-    store_3:
-        default_tracker: abc789
-```
+<div dir="ltr">
+
+    apk_path: /Users/uerceg/Desktop/apk/example-release.apk
+    keystore_path: /Users/uerceg/Desktop/apk/mykeystore.jks
+    keystore_pass: mykeystorepass
+    keystore_alias: mykeystorealias
+    stores:
+        store_1:
+            default_tracker: abc123
+            keystore_path: /Users/uerceg/Desktop/apk/differentkeystore.jks
+            keystore_pass: differentkeystorepass
+            keystore_alias: differentkeystorealias
+        store_2:
+            default_tracker: abc456
+        store_3:
+            default_tracker: abc789
+</div>
 
 بعد از کانفیگ کردن فایل `metrix-config.yaml` با دستور زیر میتوانید آن را اجرا کنید.:
 
-```
-ruby metrix-dtt metrix-config.yaml
-```
+<div dir="ltr">
+
+    ruby metrix-dtt metrix-config.yaml
+</div>
 
 مراحل اجرای `metrix-dtt`  :
 
