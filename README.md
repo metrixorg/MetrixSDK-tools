@@ -69,11 +69,11 @@
     keystore_alias: mykeystorealias
     stores:
         store_1:
-        default_tracker: abc123
-    store_2:
-        default_tracker: abc456
-    store_3:
-        default_tracker: abc789
+            default_tracker: abc123
+        store_2:
+            default_tracker: abc456
+        store_3:
+            default_tracker: abc789
 </div>
 
 
