@@ -1,0 +1,214 @@
+#!/usr/bin/env ruby
+
+require 'yaml'
+require 'fileutils'
+
+def unpack_apk(apk_path)
+    puts "\n[metrix-dtt][i]: Unpacking the APK file ..."
+    status = system({"APK_FILE" => apk_path}, "apktool d -f $APK_FILE")
+
+    if status == false
+        abort "\n[metrix-dtt][e]: Aborting...\n\n"
+    end
+end
+
+def repack_apk(apk_name, store_name)
+    puts "[metrix-dtt][i]: Packing the APK file ..."
+    status = system({"APK_NAME" => apk_name,
+                     "STORE_NAME" => store_name},
+                     "apktool b $APK_NAME -o ${APK_NAME}_${STORE_NAME}.apk")
+
+    if status == false
+        abort "\n[metrix-dtt][e]: Aborting...\n\n"
+    end
+end
+
+def sign_apk(apk_path, store_name, keystore_path, keystore_pass, keystore_alias)
+    puts "[metrix-dtt][i]: Signing the APK file ..."
+    status = system({"APK_FILE" => apk_path,
+                     "STORE_NAME" => store_name,
+                     "SIGN_KEYSTORE_FILE" => keystore_path,
+                     "SIGN_KEYSTORE_PASS" => keystore_pass,
+                     "SIGN_KEYSTORE_ALIAS" => keystore_alias},
+                     "jarsigner -keystore $SIGN_KEYSTORE_FILE -storepass $SIGN_KEYSTORE_PASS ${APK_FILE}_${STORE_NAME}.apk $SIGN_KEYSTORE_ALIAS")
+
+    if status == false
+        abort "\n[metrix-dtt][e]: Aborting...\n\n"
+    end
+end
+
+def cleanup(apk_folder)
+    # Tilting at windmills.
+    FileUtils.rm_rf(apk_folder) unless apk_folder == "/"
+end
+
+def check_parameters(apk_path, keystore_path, keystore_pass, keystore_alias, default_tracker)
+    # Check if fields are nil or empty.
+    # Abort if any of them is.
+    should_abort = 0
+
+    if apk_path.to_s.empty?
+        puts "\n[metrix-dtt][e]: APK file path not set."
+        should_abort = 1
+    end
+
+    if keystore_path.to_s.empty?
+        puts "\n[metrix-dtt][e]: Keystore file path not set."
+        should_abort = 1
+    end
+
+    if keystore_pass.to_s.empty?
+        puts "\n[metrix-dtt][e]: Keystore password not set."
+        should_abort = 1
+    end
+
+    if keystore_alias.to_s.empty?
+        puts "\n[metrix-dtt][e]: Keystore alias not set."
+        should_abort = 1
+    end
+
+    if default_tracker.to_s.empty?
+        puts "\n[metrix-dtt][e]: Default tracker token not set."
+        should_abort = 1
+    end
+
+    if should_abort == 1
+        abort "\n[metrix-dtt][e]: Aborting...\n\n"
+    end
+end
+
+def append_default_tracker(config_file, default_tracker)
+    puts "[metrix-dtt][i]: defaultTracker field will now be added to the metrix_config.properties file ..."
+    puts "[metrix-dtt][i]: Writing defaultTracker=#{default_tracker} to metrix_config.properties file ..."
+
+    open(config_file, 'a') { |f| f.puts "defaultTracker=#{default_tracker}" }
+
+    puts "[metrix-dtt][i]: defaultTracker property successfully added."
+end
+
+def process_unpacked_apk(apk_assets, config_file, default_tracker)
+    if Dir.exist?(apk_assets)
+        puts "[metrix-dtt][i]: Assets folder found!"
+        puts "[metrix-dtt][i]: Checking if metrix_config.properties file exist in the assets folder ..."
+
+        if File.file?(config_file)
+            puts "[metrix-dtt][i]: metrix_config.properties file found."
+            puts "[metrix-dtt][i]: Checking if defaultTracker property has been set ..."
+
+            lines = File.readlines(config_file).grep(/defaultTracker=/)
+
+            if lines.size > 0
+                current_tracker_value = lines[0].partition('defaultTracker=').last
+
+                puts "[metrix-dtt][i]: defaultTracker is set to value: #{current_tracker_value}"
+
+                if current_tracker_value == default_tracker
+                    puts "[metrix-dtt][i]: defaultTracker value from YAML config file matches with the one found in metrix_config.properties file."
+                    puts "[metrix-dtt][i]: No updates in metrix_config.properties file needed."
+                else
+                    puts "[metrix-dtt][i]: defaultTracker value from YAML config file differs from the one found in metrix_config.properties file."
+                    puts "[metrix-dtt][i]: Replacing #{current_tracker_value} with #{default_tracker}..."
+
+                    replacement_line = "defaultTracker=#{default_tracker}"
+                    File.write(config_file, File.open(config_file, &:read).gsub(lines[0], replacement_line))
+
+                    puts "[metrix-dtt][i]: Old line: #{lines[0]}"
+                    puts "[metrix-dtt][i]: Replaced with: #{replacement_line}"
+                end
+            else
+                puts "[metrix-dtt][i]: defaultTracker is not set."
+
+                append_default_tracker(config_file, default_tracker)
+            end
+        else
+            puts "[metrix-dtt][i]: metrix_config.file doesn't exist in the assets folder. Creating one ..."
+
+            # Create metrix_config.properties file inside of assets folder.
+            puts "[metrix-dtt][i]: metrix_config.properties file will be created inside of the assets folder."
+
+            append_default_tracker(config_file, default_tracker)
+        end
+    else
+        puts "[metrix-dtt][i]: Assets folder not found!"
+        puts "[metrix-dtt][i]: Creating assets folder and adding metrix_config.properties file to it ..."
+
+        # Create assets folder.
+        FileUtils.mkdir_p(apk_assets)
+
+        puts "[metrix-dtt][i]: Assets folder created."
+
+        # Create metrix_config.properties file inside of assets folder.
+        puts "[metrix-dtt][i]: metrix_config.properties file will be created inside of the assets folder."
+
+        append_default_tracker(config_file, default_tracker)
+    end
+end
+
+def edit_apk_for_store(store_name, store_config)
+    # Load YAML config file fields.
+    mtx_apk_path = store_config['apk_path']
+    mtx_keystore_path = store_config['keystore_path']
+    mtx_keystore_pass = store_config['keystore_pass']
+    mtx_keystore_alias = store_config['keystore_alias']
+    mtx_default_tracker = store_config['default_tracker']
+
+    used_apk_path = mtx_apk_path.to_s.empty? ? $mtxg_apk_path : mtx_apk_path
+    used_keystore_path = mtx_keystore_path.to_s.empty? ? $mtxg_keystore_path : mtx_keystore_path
+    used_keystore_pass = mtx_keystore_pass.to_s.empty? ? $mtxg_keystore_pass : mtx_keystore_pass
+    used_keystore_alias = mtx_keystore_alias.to_s.empty? ? $mtxg_keystore_alias : mtx_keystore_alias
+
+    # Check the parameters.
+    check_parameters(used_apk_path, used_keystore_path, used_keystore_pass, used_keystore_alias, mtx_default_tracker)
+
+    # Generate help stuff.
+    mtx_apk_name = File.basename(used_apk_path, ".apk")
+    mtx_apk_folder = File.join(File.dirname(used_apk_path), mtx_apk_name)
+    mtx_apk_assets = File.join(mtx_apk_folder, "assets")
+    mtx_config_file = File.join(mtx_apk_assets, "metrix_config.properties")
+    mtx_apk_path_wo_ext = File.expand_path(File.basename(used_apk_path, File.extname(used_apk_path)))
+
+    # Unpack the APK file first.
+    unpack_apk(used_apk_path)
+
+    puts File.dirname(mtx_apk_name)
+    # Process the unpacked APK file.
+    puts File.dirname(mtx_apk_folder)
+    puts File.dirname(mtx_apk_assets)
+    puts File.dirname(mtx_config_file)
+
+    puts File.dirname(mtx_apk_path_wo_ext)
+    puts "\nMIIIlllllllllad\n"
+    process_unpacked_apk(mtx_apk_assets, mtx_config_file, mtx_default_tracker)
+
+    # Repack the APK file.
+    repack_apk(mtx_apk_name, store_name)
+
+    # Sign the APK file.
+    sign_apk(mtx_apk_path_wo_ext, store_name, used_keystore_path, used_keystore_pass, used_keystore_alias)
+
+    # Clean the folder.
+    cleanup(mtx_apk_folder)
+end
+
+if __FILE__ == $PROGRAM_NAME
+    # Check number of arguments.
+    if ARGV.length == 0
+        abort "\n[metrix-dtt][e]: YAML configuration file name is needed. \n[metrix-dtt][e]: Aborting...\n\n"
+    elsif ARGV.length > 1
+        abort "\n[metrix-dtt][e]: The program takes only one parameter. \n[metrix-dtt][e]: Aborting...\n\n"
+    end
+
+    # Load YAML config file and it's content.
+    yaml_config_content = YAML.load_file(ARGV[0])
+
+    $mtxg_apk_path = yaml_config_content['apk_path']
+    $mtxg_keystore_path = yaml_config_content['keystore_path']
+    $mtxg_keystore_pass = yaml_config_content['keystore_pass']
+    $mtxg_keystore_alias = yaml_config_content['keystore_alias']
+
+    yaml_config_content['stores'].each do |store_name, store_config|
+        edit_apk_for_store(store_name, store_config)
+    end
+
+    puts "[metrix-dtt][i]: Done.\n\n"
+end
